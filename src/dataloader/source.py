@@ -25,10 +25,10 @@ class Source:
         if(not isinstance(new_props,dict)):
             raise TypeError("Provided properties should be dictionary")
         
-        self.dict = new_props
+        self.properties = new_props
         
     def setFetcher(self,new_fetcher):
-        if(not issubclass(new_fetcher, Fetcher)):
+        if(not issubclass(new_fetcher.__class__, Fetcher)):
             raise TypeError('Provided Fetcher should be a subclass of Fetcher')
         
         self.fetcher = new_fetcher
@@ -50,7 +50,7 @@ class ParallelCompositeSource(Source):
         self.subSources = []
         
     def addSouce(self, source):
-        if(not issubclass(source,Source)):
+        if(not issubclass(source.__class__,Source)):
             raise TypeError("Element to be added as sub source should of type Source")
         
         self.subSources.append(source)
@@ -63,7 +63,7 @@ class ParallelCompositeSource(Source):
                 futures.append(executor.submit(source.fetchDataAsBytes))
                 
             for future in as_completed(futures):
-                print('completed load of source data in bytes')
+                print('completed load of source data in bytes', future.result())
                 
     def fetchDataAsList(self):
         

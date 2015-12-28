@@ -5,7 +5,7 @@ Created on Dec 17, 2015
 '''
 import urllib.request
 from urllib.error import HTTPError
-from datetime import time
+from datetime import time, datetime
 import zipfile
 
 class Fetcher:
@@ -30,21 +30,31 @@ class FileFetcher(Fetcher):
     def downloadFileFromURL(self,location,properties):
         fileBytes=None
         try:
+            print(properties)
             hdrs = properties['urlHeaders']
             req = urllib.request.Request(location,None,headers=hdrs)
             output = urllib.request.urlopen(req)
             fileBytes = output.read()
         except HTTPError as e:
             print("Error while fetching data", e)
+            raise e
         except Exception as er:
             print('Unknown error while fetching data',er) 
+            raise er
         
-        tempFile = FileFetcher.tempDir + 'tempFileScrapper' + time.time()
+        fileName = 'tempFileScrapper'
+        if 'tempFileFromURL' in properties:
+            fileName = properties['tempFileFromURL']
+            
+        tempFile = FileFetcher.tempDir + fileName + datetime.now().strftime("%Y%B%d")
         
-        tf = open(tempFile,'w+b')
-        tf.write(fileBytes)
-        tf.close()
-        return tempFile 
+        if(fileBytes):
+            tf = open(tempFile,'w+b')
+            tf.write(fileBytes)
+            tf.close()
+            return tempFile
+        else:
+            return None 
     
     def readLinesFromFile(self,fileLocation,properties):
         f = open(fileLocation,'r')
@@ -91,10 +101,12 @@ class FileFetcher(Fetcher):
         if(location.startswith("http://")):
             fileLocation = self.downloadFileFromURL(location, properties)  
         
-        bytesData = self.readBytesFromFile(fileLocation, properties)
-        
-        bytesData = self.processBytesPostRead(bytesData,fileLocation,properties)
-        return bytesData   
+        if(fileLocation):
+            bytesData = self.readBytesFromFile(fileLocation, properties)
+            bytesData = self.processBytesPostRead(bytesData,fileLocation,properties)
+            return bytesData  
+        else:
+            return None 
     
 class ZipFileFetcher(FileFetcher):  
     
@@ -104,8 +116,7 @@ class ZipFileFetcher(FileFetcher):
     def processBytesPostRead(self,bytesData,fileLocation,properties):
         zipFile = zipfile.ZipFile(fileLocation,"r")
         
-        extractedFileName = properties['extractFile']
-        extractedFileName = extractedFileName + time.time() 
+        extractedFileName = properties['extractFile'] 
         ''' 
         need to adda counter here along with time 
         '''
@@ -114,7 +125,7 @@ class ZipFileFetcher(FileFetcher):
         
         bytesRead = None
         extractedFile = open(FileFetcher.tempDir + extractedFileName, "rb")
-        bytesRead = extractedFileName.read()
+        bytesRead = extractedFile.read()
         extractedFile.close()
         zipFile.close()
         
